@@ -12,6 +12,6 @@ Documents pour le cours de R avancé (M1 MAS, Rennes)
 1. MongoDB
 1. Tidymodels
 
-## Modalités de contrôme des connaissances
+## Modalités de contrôle des connaissances
 
 TODO
