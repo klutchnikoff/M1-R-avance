@@ -4,7 +4,8 @@ Documents pour le cours de R avancé (M1 MAS, Rennes)
 
 ## Coder avec style
 
-[Une référence](http://adv-r.had.co.nz/Style.html)
+[Une référence](http://adv-r.had.co.nz/Style.html) écrite par l'auteur principal des packages 
+du [tidyverse](https://www.tidyverse.org).
 
 ## Plan du cours
 
