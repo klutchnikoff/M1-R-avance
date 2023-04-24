@@ -1,0 +1,299 @@
+---
+title: "Tidyverse - Exercices (Correction)"
+date: '`r stringr::str_to_title(format(Sys.Date(), "%B %Y"))`'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Iris
+
+Nous considérons le jeu de données `iris`. Répondre aux questions suivantes en utilisant les fonctions du package `dplyr` :
+
+1. Sélectionner les variables `Petal.Width` et `Species`.
+
+```{r}
+iris %>%
+  select(Petal.Width, Species) %>%
+  head(3)
+```
+
+2. Construire une table qui contient uniquement les iris d'espèce `versicolor` ou `virginica`.
+
+```{r}
+# Avec l'opérateur %in%
+iris %>%
+  filter(Species %in% c("versicolor", "virginica")) %>%
+  head(3)
+# Avec l'opérateur logique OR
+iris %>%
+  filter(Species == "versicolor" | Species == "virginica") %>%
+  head(3)
+```
+
+3. Calculer the nombre d'iris  `setosa` en utilisant `summarise`.
+
+```{r}
+iris %>%
+  filter(Species == "setosa") %>%
+  summarise(n = n())
+```
+
+4. Calculer la moyenne de la variable `Petal.Width` pour les iris de l'espèce `versicolor`.
+
+```{r}
+iris %>%
+  filter(Species == "versicolor") %>%
+  summarise(mean_petal_width = mean(Petal.Width))
+```
+
+5. Ajouter dans le jeu de données la variable `Sum_Petal` qui correspond à la somme de `Petal.Width` et `Sepal.Width`.
+
+```{r}
+iris %>%
+  mutate(Sum_Petal = Petal.Width + Sepal.Width) %>%
+  head(3)
+```
+
+6. Calculer la moyenne et la variance de la variable `Sepal.Length` pour chaque espèce.
+
+```{r}
+iris %>%
+  group_by(Species) %>%
+  summarise(mean_sepal_length = mean(Sepal.Length),
+            var_sepal_length = var(Sepal.Length),
+            .groups = 'drop') # Évite un message d'avertissement
+```
+
+## Aviation
+
+Nous considérons la table `hflights` qui contient des informations sur les vols au départ des aéroports *Houston George Bush Intercontinental Airport* (IATA: IAH) et *William P. Hobby Airport* (IATA: HOU),
+
+```{r}
+library(hflights)
+hflights <- as_tibble(hflights)
+```
+
+1. Sélectionner les variables qui se situent entre `Origin` et `Cancelled` de différentes façons.
+
+```{r}
+# Remarque : positions de Origin et Cancelled
+names(hflights)[c(14, 19)]
+# Remarque : quelles sont les variables ?
+names(hflights)[13:18]
+# Par le nom
+hflights %>%
+  select(Dest, Distance, TaxiIn, TaxiOut) %>%
+  head(3)
+# Par la position (argument vectoriel)
+hflights %>%
+  select(names(hflights)[15:18]) %>%
+  head(3)
+# Par des helpers
+hflights %>%
+  select(matches("D?st.*") | starts_with("Taxi")) %>%
+  head(3)
+```
+
+2. Sélectionner les variables `DepTime`, `ArrTime`, `ActualElapsedTime`, `AirTime`, `ArrDelay` et `DepDelay`.
+
+```{r}
+hflights %>%
+  select(ends_with(c("Time", "Delay"))) %>%
+  head(3)
+```
+
+3. Ajouter une variable `ActualGroundTime` qui correspond à `ActualElapsedTime` moins `AirTime`.
+
+```{r}
+hflights %>%
+  mutate(ActualGroundTime = ActualElapsedTime - AirTime) %>%
+  select(ActualElapsedTime, AirTime, ActualGroundTime) %>%
+  head(3)
+```
+
+4. Ajouter une variable `AverageSpeed` qui donne la vitesse moyenne du vol et ordonner la table selon les valeurs décroissantes de cette variable.
+
+```{r}
+hflights %>%
+  mutate(AverageSpeed = Distance / AirTime) %>%
+  select(Origin, Dest, Distance, AirTime, AverageSpeed) %>%
+  arrange(desc(AverageSpeed)) %>%
+  head(3)
+```
+
+5. Sélectionner les vols à destination de `JFK`.
+
+```{r}
+hflights %>%
+  filter(Dest == "JFK") %>%
+  select(FlightNum, Origin, Dest) %>%
+  head(3)
+```
+
+6. Calculer le nombre de vols à destination de `JFK`.
+
+```{r}
+hflights %>%
+  filter(Dest == "JFK") %>%
+  summarise(n = n())
+```
+
+7. Créer un résumé de `hflights` qui contient :
+      + `n` : le nombre total de vols ;
+      + `n_dest`: le nombre total de destinations ;
+      + `n_carrier` : le nombre total de compagnies.
+
+```{r}
+hflights %>%
+  summarise(n         = n(),
+            n_dest    = n_distinct(Dest),
+            n_carrier = n_distinct(UniqueCarrier))
+```
+
+8. Créer un résumé de `hflights` qui contient, pour les vols de la compagnie **AA** :
+      + le nombre total de vols ;
+      + le nombre total de vols annulés ;
+      + la valeur moyenne de `ArrDelay` (attention à la gestion des `NA`).
+
+```{r}
+hflights %>%
+  filter(UniqueCarrier == "AA") %>%
+  summarise(n           = n(),
+            n_cancelled = sum(Cancelled),
+            mean_delay  = mean(ArrDelay, na.rm = TRUE))
+```
+
+9. Calculer pour chaque compagnie :
+      + le nombre total de vols ;
+      + La valeur moyenne de `AirTime`.
+
+```{r}
+hflights %>%
+  group_by(UniqueCarrier) %>%
+  summarise(n             = n(),
+            mean_air_time = mean(AirTime, na.rm = TRUE),
+            .groups = 'drop') # Évite un message d'avertissement
+```
+
+10. Ordonner les compagnies en fonction des retards moyens au départ.
+
+```{r}
+hflights %>%
+  group_by(UniqueCarrier) %>%
+  summarise(mean_dep_delay = mean(DepDelay, na.rm = TRUE),
+            .groups = 'drop') %>% # Évite un message d'avertissement
+  arrange(mean_dep_delay)
+```
+
+## Tennis
+
+Nous considérons les données sur les résultats de tennis dans les tournois du Grand Chelem en 2013. Les données, ainsi que le descriptif des variables, se trouvent à l'adresse suivante : 
+
+https://archive.ics.uci.edu/ml/datasets/Tennis+Major+Tournament+Match+Statistics
+
+Nous considérons d'abord le tounoi masculin de Roland Garros. Utiliser les verbes de `dplyr` pour répondre aux questions suivantes.
+
+1. Importer les données.
+
+```{r}
+fpath <- file.path("data", "Tennis", "FrenchOpen-men-2013.csv")
+rg_tbl <- read_csv(fpath)
+rg_tbl %>% glimpse()
+```
+
+2. Afficher le nom des adversaires de Roger Federer.
+
+```{r}
+rg_tbl %>%
+  filter(Player2 == "Roger Federer") %>% # Roger Federer n'est jamais Player1
+  select(Player1)
+```
+
+3. Afficher le nom des demi-finalistes.
+
+```{r}
+rg_tbl %>%
+  filter(Round == 6) %>% # 7: Finale, 6, Demi-finale, ...
+  select(Player1, Player2)
+```
+
+4. Combien y a t-il eu de points disputés en moyenne par match ? Il faudra penser à ajouter dans la table une variable correspondant au nombre de points de chaque match (verbe `mutate`).
+
+```{r}
+rg_tbl %>%
+  mutate(total_points = TPW.1 + TPW.2) %>%
+  summarise(mean_total_points = mean(total_points))
+```
+
+5. Combien y a t-il eu d'aces par match en moyenne ?
+
+```{r}
+rg_tbl %>%
+  mutate(aces = ACE.1 + ACE.2) %>%
+  summarise(mean_aces = mean(aces))
+```
+
+6. Combien y a t-il eu d'aces par match en moyenne à chaque tour ?
+
+```{r}
+rg_tbl %>%
+  mutate(aces = ACE.1 + ACE.2) %>%
+  group_by(Round) %>%
+  summarise(mean_aces = mean(aces))
+```
+
+7. Combien y a t-il eu de doubles fautes au total dans le tournoi ?
+
+```{r}
+rg_tbl %>%
+  mutate(double_faults = DBF.1 + DBF.2) %>%
+  summarise(sum_double_faults = sum(double_faults, na.rm = TRUE))
+```
+
+8. Importer les données pour le tournoi de Wimbledon masculin de 2013.
+
+```{r}
+fpath <- file.path("data", "Tennis", "Wimbledon-men-2013.csv")
+w_tbl <- read_csv(fpath)
+w_tbl %>% glimpse()
+```
+
+9. Concaténer les tables en ajoutant une variable permettant d'identifier le tournoi. On pourra utiliser `bind_rows()` avec l'option `.id`.
+
+```{r}
+tbl <- bind_rows(RolandGarros = rg_tbl,
+                 Wimbledon = w_tbl,
+                 .id = "Tournoi")
+tbl %>%
+  group_by(Tournoi) %>%
+  summarise(n = n(),
+            .groups = 'drop') # Évite un message d'avertissement
+```
+
+10. Afficher les matchs de Federer pour chaque tournoi.
+
+```{r}
+# Aucun match de Federer à Wimbledon ?
+tbl %>%
+  filter(Player1 == "Roger Federer" | Player2 == "Roger Federer") %>%
+  select(Tournoi, Player1, Player2)
+# Il faut faire attention ...
+tbl %>%
+  filter(grepl("Federer", Player1) | grepl("Federer", Player2)) %>%
+  select(Tournoi, Player1, Player2)
+```
+
+11. Comparer les nombres d'aces par matchs à chaque tours pour les tournois de Roland Garros et Wimbledon.
+
+```{r}
+tbl %>%
+  mutate(aces = ACE.1 + ACE.2) %>%
+  group_by(Round, Tournoi) %>%
+  summarise(mean_aces = mean(aces),
+            .groups = 'drop') %>% # Évite un message d'avertissement
+  spread(Round, mean_aces)
+```
